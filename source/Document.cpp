@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <sstream>
 
 #include "Document.h"
 
@@ -11,6 +12,7 @@ Document::Document(std::string filepath, std::string file_extension, std::unique
 {
 }
 
+/* concordence contains every term in the document and its counter */
 std::unordered_map<std::string, int> Document::get_concordance() {
     return concordance;
 }
@@ -95,37 +97,26 @@ std::string Document::read_content() {
 */
 std::vector<std::string> Document::clean_word(std::string &word) {
     std::vector<std::string> clean_words;
+
     /* transform every word to lower case letters */
     std::transform(word.begin(), word.end(), word.begin(),
-                   [](auto c) { return std::tolower(c); });
+                   [](unsigned char c) { return std::tolower(c); });
 
-    /* remove special characters */
-    std::replace_if(
-        word.begin(), word.end(),
-        [](auto c) { return std::ispunct(c) || std::isdigit(c); }, ' ');
-
-    /* split the word if neccessary and append to result vector */
-    std::stringstream iss(word);
-    std::string split_word;
-    while (iss >> split_word) {
-        clean_words.push_back(split_word);
+    /* keep only alphabetic characters, and split words by non alpha numeric chars */
+    std::string current_word;
+    for (unsigned char c: word) {
+        if (std::isalpha(c)) {
+            current_word += c;
+        } else {
+            clean_words.push_back(current_word);
+            current_word.clear();
+        }
     }
+
+    /* if the clean string is not empty, add to result */
+    if (!current_word.empty()) {
+        clean_words.push_back(current_word);
+    }
+
     return clean_words;
-}
-
-/*
- * checks indexed_at time against the last modification of the file
- * if the file was modified after it was indexed, it needs to be indexed again,
- * and the function returns true, otherwise the function returns false
- * TODO: Move to index
- */
-bool Document::needs_reindexing() {
-    try {
-        std::filesystem::file_time_type ftime = std::filesystem::last_write_time(this->get_filepath());
-        std::chrono::time_point tp = std::chrono::file_clock::to_sys(ftime);
-        return tp > this->indexed_at;
-    } catch (std::exception &e) {
-        std::cerr << "Error ocurred: " << e.what() << std::endl;
-        return false;
-    }
 }

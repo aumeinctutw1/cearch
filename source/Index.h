@@ -20,10 +20,11 @@ class Index {
         *   calculates a ranking from tfidf index and returns the documents with
         *   the highest rank, based on the input
         */
-        std::vector<std::pair<std::string, double>> queryIndex(const std::vector<std::string> &input_values);
+        std::vector<std::pair<std::string, double>> query_index(const std::vector<std::string> &input_values);
 
         int get_document_counter();
         void print_tfidf_index();
+        void set_thread_num(int num);
 
     private:
         /* vector of all Documents in the index */

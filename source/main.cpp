@@ -8,14 +8,14 @@
 /* cearch headers */
 #include "Index.h"
 #include "Server.h"
-#include "Timer.h"
 
 int main(int argc, const char *argv[]) {
-    /* read configuration from command line */
-    if (argc != 6) {
+    /*
+    *   TODO: Use propper commandline parsing
+    */
+    if (argc != 5) {
         std::cerr << "Usage: ./cearch <Port> <Directory to index> <directory ";
-        std::cerr << "to save index in> <number of threads to use>";
-        std::cerr << "<timer in seconds for reindexing>";
+        std::cerr << "to save index in> <number of threads to use> ";
         std::cerr << std::endl;
         return 1;
     }
@@ -24,20 +24,19 @@ int main(int argc, const char *argv[]) {
     std::string directory = argv[2];
     std::string index_path = argv[3];
     int threads = atoi(argv[4]);
-    int tick = atoi(argv[5]);
 
     try {
-        /* create io context */
         boost::asio::io_context io_context;
 
         /* 
-        *   init the index and timer 
-        *   TODO: Make indexing asynchronous
+        *   TODO: Make indexing asynchronous?
+        *   Right now it blocks here until the indexing is done
         */
         Index idx(directory, index_path, threads);
-        Timer timer(tick, io_context, idx);
 
         std::cout << "Starting cearch server on port: " << port << std::endl;
+
+        /* TODO: Use grpc?*/
         Server server(io_context, port, idx);
         io_context.run();
     } catch (const std::exception &e) {

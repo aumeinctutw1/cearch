@@ -47,7 +47,7 @@ void Session::write_response() {
         /* retrieve the result from the index */
         std::vector<std::pair<std::string, double>> result;
         if (!input_values.empty()) {
-            result = idx.queryIndex(input_values);
+            result = idx.query_index(input_values);
         }
 
         /* insert result into index.html */

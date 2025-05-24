@@ -13,6 +13,11 @@
 Index::Index(std::string directory, std::string index_path, int threads_used)
     : index_path(index_path), thread_num(threads_used) {
 
+    if (threads_used == 0 || threads_used < 0) {
+        std::cerr << "Threads used is set to 0 or smaller than 0, setting 1" << std::endl;
+        set_thread_num(1);
+    }
+    
     const auto processor_count = std::thread::hardware_concurrency();
     if (processor_count == 0) {
         std::cerr << "Processor count cant be determined" << std::endl;
@@ -30,13 +35,30 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
 
     /* statistics */
     std::cout << "Documents in index: " << get_document_counter() << std::endl;
+
+    /* debugging */
+    std::ofstream debug_file("debug.txt");
+
+    if (!debug_file.is_open()) {
+        std::cerr << "outfile could not be opened" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    for (auto &document: documents) {
+        debug_file << "Document " << document->get_filepath() << std::endl;
+        std::unordered_map<std::string, int> concordance = document->get_concordance();
+
+        for (const auto &entry: concordance) {
+            debug_file << entry.first << " " << entry.second << " " << document->get_tfidf_score(entry.first) << std::endl;
+        }
+    }
 }
 
 /*
  *  queries the index and returns the result ordered by tfidf ranking
  *  returns a sorted vector of pairs <filepath, rank>, ascending order
  */
-std::vector<std::pair<std::string, double>> Index::queryIndex(const std::vector<std::string> &input_values) {
+std::vector<std::pair<std::string, double>> Index::query_index(const std::vector<std::string> &input_values) {
     std::vector<std::pair<std::string, double>> result;
     /* 
     *   loop over every document in the index 
@@ -47,6 +69,10 @@ std::vector<std::pair<std::string, double>> Index::queryIndex(const std::vector<
         for (auto &input : input_values) {
             try {
                 rank = document->get_tfidf_score(input);
+                /* debugging */
+                std::cout << "Getting tfidf rank of term: " << input;
+                std::cout << " in Document: " << document->get_filepath();
+                std::cout << " rank: " << rank << std::endl;
             } catch (std::exception &e) {
                 std::cerr << "Error getting tfidf rank of term: " << input;
                 std::cerr << " in Document: " << document->get_filepath();
@@ -88,7 +114,6 @@ void Index::build_document_index(std::string directory) {
             for (auto const &entry : std::filesystem::recursive_directory_iterator(directory)) {
                 std::string filepath = entry.path();
                 std::string file_extension = std::filesystem::path(entry.path()).extension();
-
                 try {
                     std::unique_ptr<Document> new_doc = DocumentFactory::create_document(filepath, file_extension);
                     new_doc->index_document();
@@ -116,7 +141,8 @@ void Index::build_tfidf_index() {
     int files_per_thread = get_document_counter() / thread_num;
     for (int i = 0; i < thread_num; ++i) {
         int start_index = i * files_per_thread;
-        int end_index = (i == thread_num) ? get_document_counter(): (i + 1) * files_per_thread;
+        int end_index = (i == thread_num - 1) ? get_document_counter(): (i + 1) * files_per_thread;
+        std::cout << "Starting Thread, Start Index: " << start_index << " End Index: " << end_index << std::endl;
         threads.emplace_back([this, start_index, end_index]() {
             this->calculate_tfidf_index(start_index, end_index);
         });
@@ -141,6 +167,7 @@ void Index::build_tfidf_index() {
  */
 void Index::calculate_tfidf_index(int start_index, int end_index) {
     for (int i = start_index; i < end_index; ++i) {
+        std::cout << "Calculating tfidf index for document: " << documents.at(i)->get_filepath() << std::endl;
         for (auto &term : documents.at(i)->get_concordance()) {
             /* skip stop words */
             if (std::find(stopwords.begin(), stopwords.end(), term.first) !=
@@ -203,4 +230,13 @@ void Index::print_tfidf_index() {
     for (const auto &document: documents) {
         document->print_tfidf_scores();
     }
+}
+
+void Index::set_thread_num(int num) {
+    if (num < 0 || num == 0) {
+        std::cerr  << "Threads num cant be 0 or smaller than 0, not setting thread num" << std::endl;
+        return;
+    }
+
+    this->thread_num = num;
 }
