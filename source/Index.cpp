@@ -8,7 +8,7 @@
 
 /*
  *  The directory is the directory which is read and indexed, the index_path is
- *  TODO: save index to filesystem, json?
+ *  TODO: save and load index to filesystem, json? 
  */
 Index::Index(std::string directory, std::string index_path, int threads_used)
     : index_path(index_path), thread_num(threads_used) {
@@ -29,17 +29,19 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
     }
 
     /* statistics */
-    std::cout << "Documents: " << get_document_counter() << std::endl;
+    std::cout << "Documents in index: " << get_document_counter() << std::endl;
 }
 
 /*
  *  queries the index and returns the result ordered by tfidf ranking
- *  returns a sorted vector of pairs <filepath, rank>
+ *  returns a sorted vector of pairs <filepath, rank>, ascending order
  */
-std::vector<std::pair<std::string, double>> Index::queryIndex(
-    const std::vector<std::string> &input_values) {
+std::vector<std::pair<std::string, double>> Index::queryIndex(const std::vector<std::string> &input_values) {
     std::vector<std::pair<std::string, double>> result;
-    /* loop over every document in the index */
+    /* 
+    *   loop over every document in the index 
+    *   TODO: Split index in Buckets, use threads to search the buckets
+    */
     for (auto &document : documents) {
         double rank = 0.0;
         for (auto &input : input_values) {
@@ -61,7 +63,10 @@ std::vector<std::pair<std::string, double>> Index::queryIndex(
 
     /* Sort the result ascending by rank */
     std::sort(result.begin(), result.end(),
-        [](const auto &a, const auto &b) { return a.second > b.second; });
+        [](const auto &a, const auto &b) { 
+            return a.second > b.second; 
+        }
+    );
 
     return result;
 }
@@ -167,33 +172,6 @@ double Index::inverse_doc_frequency(std::string term, const std::vector<std::uni
     }
 
     return std::log10((double)n / (double)term_count);
-}
-
-/*
- * Used to be run in specific intervall, to rebuild the index
- * checks the Document index and reindexes changed documents,
- * if a documents changed, the index also has to be rebuild
- */
-void Index::rebuild_index() {
-    bool reindex_tfidf = false;
-    for (auto &document : documents) {
-        if (document->needs_reindexing()) {
-            document->index_document();
-            reindex_tfidf = true;
-        }
-    }
-    /*
-     * if one document is changed the tfidf index needs to be rebuild
-     * and stored on the filesystem again
-     */
-    if (reindex_tfidf) {
-        build_tfidf_index();
-    }
-}
-
-void Index::run_reindexing() {
-    std::cout << "Start reindexing" << std::endl;
-    rebuild_index();
 }
 
 /*
