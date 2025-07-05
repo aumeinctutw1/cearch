@@ -1,9 +1,10 @@
 CXX=clang++
-CXXFLAGS=-Wall -Wextra -std=c++20 -O3
+CXXFLAGS=-Wall -Wextra -std=c++20 -O1 
+DEBUG = -fsanitize=address -g
 CXXLIBS=-lpugixml -lboost_system -lpoppler-cpp
 
 APP_NAME=cearch
-SOURCE_DIR=source
+SOURCE_DIR=indexService
 BUILD_DIR=build
 
 OS:=$(shell uname)
@@ -25,7 +26,7 @@ SOURCES=$(wildcard $(SOURCE_DIR)/*.cpp)
 OBJS=$(patsubst $(SOURCE_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 
 build: $(OBJS)
-	$(CXX) $(FLAGS) $^ -o $(APP_NAME) $(CXXLIBS)
+	$(CXX) $(CXXFLAGS) $^ -o $(APP_NAME) $(CXXLIBS)
 
 # needed building locally on Mac 
 MAC_INCLUDES =  -I/opt/homebrew/Cellar/boost/1.88.0/include \
@@ -36,7 +37,7 @@ MAC_LIBS=-lpugixml -lpoppler-cpp -L/opt/homebrew/lib/
 
 # link object files in build dir to final executable
 build_mac: $(OBJS)
-	$(CXX) $(MAC_INCLUDES) $(MAC_LIBS) -o $(APP_NAME) $(FLAGS) $^
+	$(CXX) $(CXXFLAGS) $(MAC_INCLUDES) $(MAC_LIBS) -o $(APP_NAME) $(FLAGS) $^
 
 # rule to build the object files
 # build the objects the "|" is used to tell make that dirs must exist
