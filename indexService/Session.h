@@ -41,6 +41,8 @@ class Session : public std::enable_shared_from_this<Session> {
         Request m_request;
         Response m_response;
 
+        void print_http_request_info(const Request &req);
+
         /* Request handles */
         void read_request();
         void handle_request();
@@ -48,7 +50,7 @@ class Session : public std::enable_shared_from_this<Session> {
         Response handle_search();
         Response handle_index();
         Response not_found();
-        std::string read_html_file(const std::string &file_path);
+        Response make_bad_request(const std::string &message);
 };
 
 #endif

@@ -2,20 +2,37 @@
 #include <unordered_map>
 #include <fstream>
 
+#include "nlohmann/json.hpp"
 #include "Session.h"
+#include "Document.h"
+
+using json = nlohmann::json;
 
 Session::Session(tcp::socket socket, Index &idx)
     : m_stream(std::move(socket)), m_idx(idx) {
-        /* init the possible routes for this session */
-        m_routes = {
-            {"/search", [this]() { return handle_search();}}
-        };
-    }
+
+    /* init the possible routes for this session */
+    m_routes = {
+        {"/search", [this]() { return handle_search();}},
+        {"/index", [this]() { return handle_index();}}
+    };
+}
 
 Session::~Session() {}
 
 void Session::start() {
     read_request();
+}
+
+/* for debugging and logging purpose */
+void Session::print_http_request_info(const Request &req) {
+    std::cout << "Method: " << req.method_string() << std::endl;
+    std::cout << "Target: " << req.target() << std::endl;
+
+    std::cout << "Headers:" << std::endl;
+    for (auto const& field : req) {
+        std::cout << field.name_string() << ": " << field.value() << std::endl;
+    }    
 }
 
 void Session::read_request() {
@@ -33,6 +50,9 @@ void Session::read_request() {
 }
 
 void Session::handle_request() {
+    /* print info about the request */
+    print_http_request_info(m_request);
+
     /* get the response from a handle */
     m_response = route_request(m_request.target());
 
@@ -72,67 +92,75 @@ Response Session::not_found() {
     return res;
 }
 
-/* 
-*   TODO: should return json body
-*   which contains the results
-*   The request should also be json then
-*/
-Response Session::handle_search() {
-    Response res{http::status::ok, m_request.version()};
-    res.version(m_request.version());
-    res.result(http::status::ok);
-    res.set(http::field::server, "Boost Beast");
-    res.set(http::field::content_type, "text/html");
-    std::string html_body = read_html_file("web/index.html");
-
-    std::vector<std::string> input_values;
-
-    std::string input_value;
-    if (m_request.body().size() > 0) {
-        /* parse the input field, assumong its name is "input-text" */
-        std::string request_body = m_request.body();
-        std::cout << "Body: " << request_body << std::endl;
-        size_t start_pos = request_body.find("input-text=");
-        if (start_pos != std::string::npos) {
-            /* move past the name to get the value */
-            start_pos += std::strlen("input-text=");
-            size_t end_pos = request_body.find("&", start_pos);
-            input_value = request_body.substr(start_pos, end_pos - start_pos);
-        }
-    }
-
-    /* extract every single word from input value */
-    input_values = Document::clean_word(input_value);
-
-    /* retrieve the result from the index */
-    std::vector<std::pair<std::string, double>> result;
-    if (!input_values.empty()) {
-        result = m_idx.query_index(input_values);
-    }
-
-    /* insert result into index.html */
-    size_t pos = html_body.find("<table>") + strlen("<table>");
-    if (pos != std::string::npos) {
-        std::ostringstream oss;
-        for (auto &i : result) {
-            oss << "<tr><td>" << i.first << " => " << i.second << "</td></tr>";
-        }
-        std::string result_table = oss.str();
-        html_body.insert(pos, result_table);
-    } else {
-        std::cerr << "Couldnt find table in html body, no results shown";
-    }
-
+Response Session::handle_index() {
+    Response res{http::status::not_found, 11};
+    res.set(http::field::content_type, "text/plain");
+    res.body() = "Not implemented yet";
+    res.prepare_payload();
     return res;
 }
 
+/* 
+*   TODO: should return json body
+*   which contains the results
+*   the request should also be json then:
+*
+*        curl -X POST http://localhost:8080/search \
+*        -H "Content-Type: application/json" \
+*        -d '{"query": "example search term"}'
+*
+*/
+Response Session::handle_search() {
+    Response res{http::status::ok, 11};
+    res.set(http::field::server, "TFIDF Indexer");
+    res.set(http::field::content_type, "application/json");
 
-std::string Session::read_html_file(const std::string &file_path) {
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open HTML file: " + file_path);
+    std::string query = "";
+    std::vector<std::string> clean_query;
+
+    try {
+        /* try parsing the json */
+        json j = json::parse(m_request.body());
+
+        /* try accessing the query field */
+        if (j.contains("query") && j["query"].is_string()) {
+            query = j["query"];
+            std::cout << "Searching for: " << query << std::endl;
+        } else {
+            std::cout << "Invalid or missing query field" << std::endl;
+            return make_bad_request("Missing or invalid 'query' field in JSON body");
+        }
+    } catch (const json::parse_error &e) {
+        std::cerr << "JSON parse error: " << e.what() << std::endl;
+        return make_bad_request("Malformed JSON in request body");
     }
 
-    std::string html_content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    return html_content;
+    /* get search terms */
+    clean_query = Document::clean_word(query);
+
+    /* search the index */
+    std::vector<std::pair<std::string, double>> query_result = m_idx.query_index(clean_query);
+
+    json response;
+    for(const auto &[filename, score]: query_result) {
+        response["resulsts"].push_back({
+            {"filename", filename},
+            {"score", score}
+        });
+    }
+
+    res.body() = response.dump();
+    return res;
+}
+
+Response Session::make_bad_request(const std::string &message) {
+    Response res{http::status::ok, 11};
+    res.set(http::field::server, "TFIDF Indexer");
+    res.set(http::field::content_type, "application/json");
+
+    json j;
+    j["error"] = message;
+    res.body() = j.dump();
+
+    return res;
 }
