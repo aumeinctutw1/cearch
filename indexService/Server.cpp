@@ -17,7 +17,7 @@ void Server::open_acceptor() {
         if (!error_code) {
             do_accept();
         } else {
-            std::cerr << "Error: " << error_code << std::endl;
+            std::cerr << "ERROR: " << error_code << std::endl;
         }
     }
 }
@@ -29,7 +29,7 @@ void Server::do_accept() {
                 std::make_shared<Session>(std::move(socket), idx)->start();
                 do_accept();
             } else {
-                std::cerr << "Error: " << error_code << std::endl;
+                std::cerr << "ERROR: " << error_code << std::endl;
             }
         });
 }

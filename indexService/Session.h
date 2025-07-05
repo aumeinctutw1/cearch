@@ -1,11 +1,7 @@
 #ifndef _H_SESSION
 #define _H_SESSION
 
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <utility>
+#include <string>
 
 /* Boost HTTP Stuff*/
 #include <boost/asio.hpp>
@@ -18,24 +14,41 @@
 
 namespace beast = boost::beast;  // from <boost/beast.hpp>
 namespace http = beast::http;    // from <boost/beast/http.hpp>
+namespace asio = boost::asio;
+
+using tcp = asio::ip::tcp;
+
+using Request = http::request<http::string_body>;
+using Response = http::response<http::string_body>;
 
 class Session : public std::enable_shared_from_this<Session> {
-   public:
-    Session(boost::asio::ip::tcp::socket socket, Index &idx);
-    ~Session();
-    void start();
+    public:
+        explicit Session(tcp::socket socket, Index &idx);
+        ~Session();
+        void start();
 
-   private:
-    void write_response();
-    std::string read_html_file(const std::string &file_path);
+    private:
+        /* when searching we need to access the index */
+        Index &m_idx;
 
-    boost::asio::ip::tcp::socket socket;
-    Index &idx;
+        beast::tcp_stream m_stream;
 
-    /* http request buffers */
-    beast::flat_buffer m_buffer;
-    http::request<http::dynamic_body> m_request;
-    http::response<http::dynamic_body> m_response;
+        /* possible http routes */
+        std::unordered_map<std::string, std::function<Response()>> m_routes;
+
+        /* http request buffers */
+        beast::flat_buffer m_buffer;
+        Request m_request;
+        Response m_response;
+
+        /* Request handles */
+        void read_request();
+        void handle_request();
+        Response route_request(const std::string &target);
+        Response handle_search();
+        Response handle_index();
+        Response not_found();
+        std::string read_html_file(const std::string &file_path);
 };
 
 #endif
