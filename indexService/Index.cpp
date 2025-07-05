@@ -154,8 +154,7 @@ void Index::calculate_tfidf_index(int start_index, int end_index) {
         std::cout << "Calculating tfidf index for document: " << documents.at(i)->get_filepath() << std::endl;
         for (auto &term : documents.at(i)->get_concordance()) {
             /* skip stop words */
-            if (std::find(stopwords.begin(), stopwords.end(), term.first) !=
-                stopwords.end()) {
+            if (std::find(stopwords.begin(), stopwords.end(), term.first) != stopwords.end()) {
                 continue;
             }
             /* caclulating the tfidf */
