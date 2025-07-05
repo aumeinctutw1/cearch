@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <chrono>
 
 #include "ContentStrategy.h"
 
