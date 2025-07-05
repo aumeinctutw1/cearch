@@ -13,23 +13,25 @@ void Session::start() {
     write_response();
 }
 
+/* 
+*   TODO: should return json body
+*   which contains the results
+*   The request should also be json then
+*/
 void Session::write_response() {
-    /* check the buffer and respond */
     m_response.version(m_request.version());
     m_response.result(http::status::ok);
     m_response.set(http::field::server, "Boost Beast");
     m_response.set(http::field::content_type, "text/html");
     std::string html_body = read_html_file("web/index.html");
 
-    /* handle post request, aka. calculate the tfidf and display a result */
     std::vector<std::string> input_values;
 
     if (m_request.method() == http::verb::post) {
         std::string input_value;
         if (m_request.body().size() > 0) {
             /* parse the input field, assumong its name is "input-text" */
-            std::string request_body =
-                beast::buffers_to_string(m_request.body().data());
+            std::string request_body = beast::buffers_to_string(m_request.body().data());
             std::cout << "Body: " << request_body << std::endl;
             size_t start_pos = request_body.find("input-text=");
             if (start_pos != std::string::npos) {

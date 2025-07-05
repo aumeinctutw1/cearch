@@ -7,7 +7,8 @@
 #include "DocumentFactory.h"
 
 /*
- *  The directory is the directory which is read and indexed, the index_path is
+ *  The directory is the directory which is read and indexed, the index_path is 
+ *  were the index is supposed to be saved
  *  TODO: save and load index to filesystem, json? 
  */
 Index::Index(std::string directory, std::string index_path, int threads_used)
@@ -35,23 +36,6 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
 
     /* statistics */
     std::cout << "Documents in index: " << get_document_counter() << std::endl;
-
-    /* debugging */
-    std::ofstream debug_file("debug.txt");
-
-    if (!debug_file.is_open()) {
-        std::cerr << "outfile could not be opened" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    for (auto &document: documents) {
-        debug_file << "Document " << document->get_filepath() << std::endl;
-        std::unordered_map<std::string, int> concordance = document->get_concordance();
-
-        for (const auto &entry: concordance) {
-            debug_file << entry.first << " " << entry.second << " " << document->get_tfidf_score(entry.first) << std::endl;
-        }
-    }
 }
 
 /*

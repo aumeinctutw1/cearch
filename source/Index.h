@@ -42,6 +42,7 @@ class Index {
         void build_document_index(std::string directory);
         void build_tfidf_index();
         void read_stopwords(const std::string &filepath);
+
         /* calculates the inverse_doc_frequency of a term over the whole corpus */
         double inverse_doc_frequency(std::string term, const std::vector<std::unique_ptr<Document>> &corpus);
         void calculate_tfidf_index(int start_index, int end_index);

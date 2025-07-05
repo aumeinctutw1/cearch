@@ -3,7 +3,7 @@
 using boost::asio::ip::tcp;
 
 Server::Server(boost::asio::io_context &io_context, short port, Index &idx)
-    : endpoint(tcp::v4(), port), acceptor(io_context), idx(idx) {
+    :endpoint(tcp::v4(), port), acceptor(io_context), idx(idx) {
     open_acceptor();
 }
 
@@ -13,10 +13,11 @@ void Server::open_acceptor() {
         acceptor.open(endpoint.protocol());
         acceptor.set_option(boost::asio::socket_base::reuse_address(true));
         acceptor.bind(endpoint);
-        acceptor.listen(boost::asio::socket_base::max_listen_connections,
-                        error_code);
+        acceptor.listen(boost::asio::socket_base::max_listen_connections, error_code);
         if (!error_code) {
             do_accept();
+        } else {
+            std::cerr << "Error: " << error_code << std::endl;
         }
     }
 }
@@ -27,6 +28,8 @@ void Server::do_accept() {
             if (!error_code) {
                 std::make_shared<Session>(std::move(socket), idx)->start();
                 do_accept();
+            } else {
+                std::cerr << "Error: " << error_code << std::endl;
             }
         });
 }

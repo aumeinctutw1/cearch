@@ -28,9 +28,10 @@ build: $(OBJS)
 	$(CXX) $(FLAGS) $^ -o $(APP_NAME) $(CXXLIBS)
 
 # needed building locally on Mac 
-MAC_INCLUDES =  -I/opt/homebrew/Cellar/boost/1.87.0_1/include \
+MAC_INCLUDES =  -I/opt/homebrew/Cellar/boost/1.88.0/include \
 				-I/opt/homebrew/Cellar/poppler/25.04.0/include \
-				-I/opt/homebrew/Cellar/pugixml/1.15/include
+				-I/opt/homebrew/Cellar/pugixml/1.15/include \
+				-I/opt/homebrew/Cellar/nlohmann-json/3.12.0/include
 MAC_LIBS=-lpugixml -lpoppler-cpp -L/opt/homebrew/lib/
 
 # link object files in build dir to final executable
