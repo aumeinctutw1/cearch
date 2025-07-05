@@ -37,7 +37,7 @@ MAC_LIBS=-lpugixml -lpoppler-cpp -L/opt/homebrew/lib/
 
 # link object files in build dir to final executable
 build_mac: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(MAC_INCLUDES) $(MAC_LIBS) -o $(APP_NAME) $(FLAGS) $^
+	$(CXX) $(CXXFLAGS) $(MAC_INCLUDES) $(MAC_LIBS) -o $(APP_NAME) $^
 
 # rule to build the object files
 # build the objects the "|" is used to tell make that dirs must exist
