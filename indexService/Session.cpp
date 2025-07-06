@@ -14,7 +14,9 @@ Session::Session(tcp::socket socket, Index &idx)
     /* init the possible routes for this session */
     m_routes = {
         {"/search", [this]() { return handle_search();}},
-        {"/index", [this]() { return handle_index();}}
+        {"/index", [this]() { return handle_index();}},
+        /* GET, return simple statistics from index as json */
+        {"/statistics", [this]() { return handle_statistics();}}
     };
 }
 
@@ -152,12 +154,29 @@ Response Session::handle_search() {
 }
 
 Response Session::make_bad_request(const std::string &message) {
-    Response res{http::status::ok, 11};
+    Response res{http::status::bad_request, 11};
     res.set(http::field::server, "TFIDF Indexer");
     res.set(http::field::content_type, "application/json");
 
     json j;
     j["error"] = message;
+    res.body() = j.dump();
+
+    return res;
+}
+
+/*
+*   Return some statistics from the index
+*/
+Response Session::handle_statistics() {
+    Response res{http::status::ok, 11};
+    res.set(http::field::server, "TFIDF Indexer");
+    res.set(http::field::content_type, "application/json");
+
+    json j;
+    j["Document_count"] = m_idx.get_document_counter();
+    j["Total_term_count"] = m_idx.get_total_term_count();
+    j["Average_document_length"] = m_idx.get_avg_doc_length();
     res.body() = j.dump();
 
     return res;

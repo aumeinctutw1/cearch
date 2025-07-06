@@ -104,6 +104,8 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
 *   returns the number of documents in the index
 */
 int Index::get_document_counter() { return documents.size(); }
+int Index::get_total_term_count() { return m_total_term_count;}
+int Index::get_avg_doc_length() { return m_avg_doc_length; }
 
 void Index::set_thread_num(int num) {
     if (num < 0 || num == 0) {
