@@ -25,8 +25,6 @@ int main(int argc, const char *argv[]) {
     std::string index_path = argv[3];
     int threads = atoi(argv[4]);
 
-    int index_port = 23100;
-
     try {
         boost::asio::io_context io_context;
 
@@ -37,8 +35,7 @@ int main(int argc, const char *argv[]) {
         */
         Index idx(directory, index_path, threads);
 
-        std::cout << "Starting Index and Query Services" << query_port << std::endl;
-        Server index_service(io_context, index_port, idx);
+        std::cout << "Starting Index and Query Services " << query_port << std::endl;
         Server query_service(io_context, query_port, idx);
         io_context.run();
     } catch (const std::exception &e) {

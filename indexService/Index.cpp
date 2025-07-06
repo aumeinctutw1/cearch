@@ -27,12 +27,22 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
     }
     std::cout << "Processor count: " << processor_count << " used threads: " << threads_used << std::endl;
 
-    try {
-        read_stopwords("stopwords.txt");
-        build_document_index(directory);
-        set_avg_doc_length();
-    } catch (std::exception &e) {
-        std::cerr << "Caught Exception building index: " << e.what() << std::endl;
+    /* Check wether a index is present in the filesystem and can be loaded */
+    std::string index_filepath = index_path + "/index.json";
+    if (is_index_present()) {
+        std::cout << "Loading existing index found in: " << index_path << std::endl; 
+        load_index_from_file(index_filepath);
+    } else {
+        std::cout << "Building new Index" << std::endl;
+
+        try {
+            read_stopwords("stopwords.txt");
+            build_document_index(directory);
+            set_avg_doc_length();
+            save_index_to_file(index_filepath);
+        } catch (std::exception &e) {
+            std::cerr << "Caught Exception building index: " << e.what() << std::endl;
+        }
     }
 
     std::cout << "Total documents: " << get_document_counter() << std::endl;
@@ -170,4 +180,36 @@ double Index::compute_bm25(int term_freq, int doc_length, double avg_doc_len, do
     double numerator = term_freq * (k1 + 1);
     double denominator = term_freq + k1 *(1 - b + b* (double)doc_length / avg_doc_len);
     return idf * (numerator / denominator);
+}
+
+void Index::save_index_to_file(std::string filepath) {
+    nlohmann::json j;
+    for (const auto &doc: documents) {
+        j.push_back(doc->to_json());
+    }
+    std::ofstream file(filepath);
+    file << j.dump(4);
+    write_index_marker();
+}
+
+void Index::load_index_from_file(std::string filepath) {
+    std::ifstream file(filepath);
+    nlohmann::json j;
+    file >> j;
+
+    for (const auto &doc_json: j) {
+        auto doc = DocumentFactory::from_json(doc_json);
+        m_total_term_count += doc->get_total_term_count();
+        documents.push_back(std::move(doc));
+    }
+
+    set_avg_doc_length();
+}
+
+void Index::write_index_marker() {
+    std::ofstream(index_path + "/.index_complete").put('\n');
+}
+
+bool Index::is_index_present() {
+    return std::filesystem::exists(index_path + "/.index_complete");
 }

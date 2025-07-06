@@ -7,6 +7,8 @@
 #include <vector>
 #include <chrono>
 
+#include <nlohmann/json.hpp>
+
 #include "ContentStrategy.h"
 
 /* 
@@ -22,7 +24,11 @@ class Document {
 
         /* fills the concordance from the content of the document */
         void index_document();
-        
+
+        /* setter functions */
+        void set_concordance(std::unordered_map<std::string, int> concordance);
+        void set_total_term_count(int term_count);
+        void set_indexed_at(std::chrono::system_clock::time_point time);
 
         /* getter functions */
         uint64_t get_docid();
@@ -34,6 +40,9 @@ class Document {
         std::string get_file_content_as_string();
         bool contains_term(const std::string &term);
         static std::vector<std::string> clean_word(std::string &word);
+
+        /* JSON Serialization, deserialization is done in DocumentFactory */
+        nlohmann::json to_json() const;
 
     private:
         std::string read_content();

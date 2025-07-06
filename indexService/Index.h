@@ -40,6 +40,12 @@ class Index {
         void build_document_index(std::string directory);
         void read_stopwords(const std::string &filepath);
 
+        /* file persistence */
+        void write_index_marker();
+        bool is_index_present();
+        void save_index_to_file(std::string filepath);
+        void load_index_from_file(std::string filepath);
+
         /* BM25 Stuff */
         void set_avg_doc_length();
         double compute_idf(int total_docs, int doc_freq);

@@ -13,6 +13,18 @@ Document::Document(uint64_t docid, std::string filepath, std::string file_extens
 {
 }
 
+void Document::set_concordance(std::unordered_map<std::string, int> concordance_) {
+    concordance = std::move(concordance_);
+}
+
+void Document::set_total_term_count(int term_count) {
+    m_total_term_count = term_count;
+}
+
+void Document::set_indexed_at(std::chrono::system_clock::time_point time) {
+    indexed_at = time;
+}
+
 /* concordence contains every term in the document and its counter */
 std::unordered_map<std::string, int> Document::get_concordance() {
     return concordance;
@@ -73,6 +85,8 @@ void Document::index_document() {
     }
 
     indexed_at = std::chrono::system_clock::now();
+
+    /* TODO: Update in Filesystem? */
 }
 
 std::string Document::read_content() {
@@ -106,4 +120,16 @@ std::vector<std::string> Document::clean_word(std::string &word) {
     }
 
     return clean_words;
+}
+
+nlohmann::json Document::to_json() const {
+    return {
+        {"docid", m_docid},
+        {"filepath", filepath},
+        {"file_extension", file_extension},
+        {"total_term_count", m_total_term_count},
+        {"concordance", concordance},
+        {"indexed_at", std::chrono::duration_cast<std::chrono::seconds>(
+            indexed_at.time_since_epoch()).count()}
+    };
 }
