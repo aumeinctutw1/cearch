@@ -7,13 +7,15 @@
 #include "DocumentFactory.h"
 
 /*
- *  The directory is the directory which is read and indexed, the index_path is 
- *  were the index is supposed to be saved
- *  TODO: save and load index to filesystem, json? 
- */
+*   @param directory The directoy which should be crawled and indexed   
+*   @param index_path The path in which the index should be stored on filesystem
+*   @param threads_used The number of threads which should be used during indexing. Must be >=0   
+* 
+*   TODO: save and load index to filesystem, using json? 
+*/
 Index::Index(std::string directory, std::string index_path, int threads_used)
-    : index_path(index_path), thread_num(threads_used) {
-
+    : index_path(index_path), thread_num(threads_used), m_total_term_count(0)
+{
     if (threads_used == 0 || threads_used < 0) {
         std::cerr << "Threads used is set to 0 or smaller than 0, setting 1" << std::endl;
         set_thread_num(1);
@@ -25,52 +27,56 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
     }
     std::cout << "Processor count: " << processor_count << " used threads: " << threads_used << std::endl;
 
-    /* start building the index */
     try {
         read_stopwords("stopwords.txt");
         build_document_index(directory);
-        build_tfidf_index();
+        set_avg_doc_length();
     } catch (std::exception &e) {
         std::cerr << "Caught Exception building index: " << e.what() << std::endl;
     }
 
-    /* statistics */
-    std::cout << "Documents in index: " << get_document_counter() << std::endl;
+    std::cout << "Total documents: " << get_document_counter() << std::endl;
+    std::cout << "Total term count: " << m_total_term_count << std::endl;
 }
 
 /*
-*   Queries the index and returns the result ordered by tfidf ranking
+*   Queries the index and returns the result ordered by BM25 ranking
 *   returns a sorted by rank ascending vector of pairs <document->filepath, tfidf-rank>
+*
 *   TODO: timeout based search?
+*   TODO: Split index in Buckets/Shards, use threads to search the buckets
 */
 std::vector<std::pair<std::string, double>> Index::query_index(const std::vector<std::string> &input_values) {
-    std::vector<std::pair<std::string, double>> result;
-    /* 
-    *   loop over every document in the index 
-    *   TODO: Split index in Buckets, use threads to search the buckets
-    */
-    for (auto &document : documents) {
-        double rank = 0.0;
-        for (auto &input : input_values) {
-            try {
-                rank = document->get_tfidf_score(input);
-                /* debugging */
-                std::cout << "Getting tfidf rank of term: " << input;
-                std::cout << " in Document: " << document->get_filepath();
-                std::cout << " rank: " << rank << std::endl;
-            } catch (std::exception &e) {
-                std::cerr << "Error getting tfidf rank of term: " << input;
-                std::cerr << " in Document: " << document->get_filepath();
-				std::cerr << " " << e.what() << std::endl;
+    std::unordered_map<std::string, double> score_map;
+
+    for (const auto &term: input_values) {
+        std::cout << "Searching term: " << term << std::endl;
+
+        int doc_freq = 0;
+        std::vector<std::tuple<const std::string, int, int>> term_data;
+
+        for (const auto &doc: documents) {
+            int term_freq = doc->get_term_frequency(term);
+
+            if (term_freq > 0) {
+                doc_freq++;
             }
+            
+            int doc_length = doc->get_total_term_count();
+            /* temp store term_freq and doc_length for BM25 */
+            term_data.emplace_back(doc->get_filepath(), term_freq, doc_length);
         }
 
-        if (rank == 0.0) {
-            continue;
-        }
+        double idf = compute_idf(get_document_counter(), doc_freq);
 
-        result.push_back(std::make_pair(document->get_filepath(), rank));
+        for (const auto &[doc, tf, dl]: term_data) {
+            double score = compute_bm25(tf, dl, m_avg_doc_length, idf);
+            score_map[doc] += score;
+        }
     }
+
+    /* move scores into sortable vector */
+    std::vector<std::pair<std::string, double>> result(score_map.begin(), score_map.end());
 
     /* Sort the result ascending by rank */
     std::sort(result.begin(), result.end(),
@@ -87,6 +93,15 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
 */
 int Index::get_document_counter() { return documents.size(); }
 
+void Index::set_thread_num(int num) {
+    if (num < 0 || num == 0) {
+        std::cerr  << "Threads num cant be 0 or smaller than 0, not setting thread num" << std::endl;
+        return;
+    }
+
+    this->thread_num = num;
+}
+
 /*
 *   Moves trough a directy and try's to read every supported file in it
 *   For every supported file in the dir, a Document is created
@@ -102,6 +117,7 @@ void Index::build_document_index(std::string directory) {
                 try {
                     std::unique_ptr<Document> new_doc = DocumentFactory::create_document(filepath, file_extension);
                     new_doc->index_document();
+                    m_total_term_count += new_doc->get_total_term_count();
                     documents.push_back(std::move(new_doc));
                 } catch (std::exception &e) {
                     std::cerr << "Exception caught reading file: ";
@@ -113,73 +129,6 @@ void Index::build_document_index(std::string directory) {
         std::cerr << "No directoy given to index" << std::endl;
         throw std::runtime_error("Directory to index not found: " + directory);
     }
-}
-
-/*
- * Uses threads to read every file in the document index
- * and calculate its tfidf score per every word in the doucments
- */
-void Index::build_tfidf_index() {
-    std::cout << "Running build tfidf index" << std::endl;
-    const auto start{std::chrono::steady_clock::now()};
-
-    int files_per_thread = get_document_counter() / thread_num;
-    for (int i = 0; i < thread_num; ++i) {
-        int start_index = i * files_per_thread;
-        int end_index = (i == thread_num - 1) ? get_document_counter(): (i + 1) * files_per_thread;
-        std::cout << "Starting Thread, Start Index: " << start_index << " End Index: " << end_index << std::endl;
-        threads.emplace_back([this, start_index, end_index]() {
-            this->calculate_tfidf_index(start_index, end_index);
-        });
-    }
-
-    for (std::thread &thread : threads) {
-        thread.join();
-    }
-
-    const auto end{std::chrono::steady_clock::now()};
-    const std::chrono::duration<double> elapsed_seconds{end - start};
-    std::cout << "Building tfidf index took: " << elapsed_seconds.count() << "seconds" << std::endl;
-}
-
-/*
-*   calculates the tfidf for every word of every document in the
-*   document index, saves the calculated values per word in a hashmap,
-*   the values are accessed by filepath,
-*   needs the start and end index because of threads
-*   the tfidf index itself is protected by a mutex
-*/
-void Index::calculate_tfidf_index(int start_index, int end_index) {
-    for (int i = start_index; i < end_index; ++i) {
-        std::cout << "Calculating tfidf index for document: " << documents.at(i)->get_filepath() << std::endl;
-        for (auto &term : documents.at(i)->get_concordance()) {
-            if (std::find(stopwords.begin(), stopwords.end(), term.first) != stopwords.end()) {
-                continue;
-            }
-            double tfidf = documents.at(i)->get_term_frequency(term.first) * inverse_doc_frequency(term.first, documents);
-            documents.at(i)->insert_tfidf_score({term.first, tfidf});
-        }
-    }
-}
-
-/*
-*   Calculates the idf for a certain term over the whole index
-*/
-double Index::inverse_doc_frequency(std::string term, const std::vector<std::unique_ptr<Document>> &corpus) {
-    int term_count = 0;
-    int n = corpus.size();
-
-    for (auto &doc : corpus) {
-        if (doc->contains_term(term)) {
-            term_count++;
-        }
-    }
-
-    if (term_count == 0) {
-        return 0.0;
-    }
-
-    return std::log10((double)n / (double)term_count);
 }
 
 /*
@@ -206,18 +155,16 @@ void Index::read_stopwords(const std::string &filepath) {
     }
 }
 
-void Index::print_tfidf_index() {
-    std::cout << "Printing tfidf_index" << std::endl;
-    for (const auto &document: documents) {
-        document->print_tfidf_scores();
-    }
+void Index::set_avg_doc_length() {
+    m_avg_doc_length = m_total_term_count / get_document_counter();
 }
 
-void Index::set_thread_num(int num) {
-    if (num < 0 || num == 0) {
-        std::cerr  << "Threads num cant be 0 or smaller than 0, not setting thread num" << std::endl;
-        return;
-    }
+double Index::compute_idf(int total_docs, int doc_freq) {
+    return log((total_docs - doc_freq + 0.5) / (doc_freq + 0.5) + 1);
+}
 
-    this->thread_num = num;
+double Index::compute_bm25(int term_freq, int doc_length, double avg_doc_len, double idf, double k1, double b) {
+    double numerator = term_freq * (k1 + 1);
+    double denominator = term_freq + k1 *(1 - b + b* (double)doc_length / avg_doc_len);
+    return idf * (numerator / denominator);
 }

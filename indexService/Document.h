@@ -27,6 +27,7 @@ class Document {
         void insert_tfidf_score(std::pair<std::string, double> tfidf_score);
 
         /* getter functions */
+        int get_total_term_count();
         double get_tfidf_score(const std::string &term);
         int get_term_frequency(const std::string &term);
         std::unordered_map<std::string, int> get_concordance();
@@ -39,6 +40,7 @@ class Document {
     private:
         std::string read_content();
 
+        int m_total_term_count;
         std::string filepath;
         std::string file_extension;
         std::unique_ptr<ContentStrategy> strategy_;

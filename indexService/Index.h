@@ -16,23 +16,21 @@ class Index {
         Index(std::string directory, std::string index_path, int thread_num);
         ~Index() = default;
 
-        /*
-        *   calculates a ranking from tfidf index and returns the documents with
-        *   the highest rank, based on the input
-        */
         std::vector<std::pair<std::string, double>> query_index(const std::vector<std::string> &input_values);
 
         int get_document_counter();
-        void print_tfidf_index();
         void set_thread_num(int num);
 
     private:
-        /* vector of all Documents in the index */
+        /* holds a reference to every document in the index */
         std::vector<std::unique_ptr<Document>> documents;
-
-        /* holds the path to the index on the filesystem */
-        std::string index_path;
         std::vector<std::string> stopwords;
+
+        std::string index_path;
+
+        /* relevant for BM25 */
+        uint64_t m_total_term_count;
+        uint64_t m_avg_doc_length;
 
         /* threading */
         int thread_num;
@@ -40,12 +38,12 @@ class Index {
         std::vector<std::thread> threads;
 
         void build_document_index(std::string directory);
-        void build_tfidf_index();
         void read_stopwords(const std::string &filepath);
 
-        /* calculates the inverse_doc_frequency of a term over the whole corpus */
-        double inverse_doc_frequency(std::string term, const std::vector<std::unique_ptr<Document>> &corpus);
-        void calculate_tfidf_index(int start_index, int end_index);
+        /* BM25 Stuff */
+        void set_avg_doc_length();
+        double compute_idf(int total_docs, int doc_freq);
+        double compute_bm25(int term_freq, int doc_length, double avg_doc_len, double idf, double k1 = 1.2, double b = 0.75);
 };
 
 #endif

@@ -29,6 +29,10 @@ void Document::insert_tfidf_score(std::pair<std::string, double> tfidf_score) {
     tfidf_scores.insert(tfidf_score);
 }
 
+int Document::get_total_term_count() {
+    return m_total_term_count;
+}
+
 /*
  * 	returns the tfidf score of the term
  * 	returns 0 if the term is not in the Document
@@ -82,6 +86,7 @@ void Document::index_document() {
                 } else {
                     concordance[clean_word] = 1;
                 }
+                m_total_term_count++;
             }
         }
     }
