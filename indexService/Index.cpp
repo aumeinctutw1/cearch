@@ -117,7 +117,8 @@ void Index::build_document_index(std::string directory) {
                 std::string filepath = entry.path();
                 std::string file_extension = std::filesystem::path(entry.path()).extension();
                 try {
-                    std::unique_ptr<Document> new_doc = DocumentFactory::create_document(filepath, file_extension);
+                    uint64_t docid = documents.size() + 1;
+                    std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
                     new_doc->index_document();
                     m_total_term_count += new_doc->get_total_term_count();
                     documents.push_back(std::move(new_doc));

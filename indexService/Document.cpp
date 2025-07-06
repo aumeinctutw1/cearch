@@ -8,8 +8,8 @@
 #include "Document.h"
 
 /* Base Document Class */
-Document::Document(std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy)
-    : filepath(filepath), file_extension(file_extension), strategy_(std::move(strategy))
+Document::Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy)
+    :m_docid(docid), filepath(filepath), file_extension(file_extension), strategy_(std::move(strategy))
 {
 }
 
@@ -18,31 +18,12 @@ std::unordered_map<std::string, int> Document::get_concordance() {
     return concordance;
 }
 
-void Document::print_tfidf_scores() {
-    std::cout << "Doc: " << filepath << std::endl;
-    for (const auto &entry: tfidf_scores) {
-        std::cout << entry.first << " Score: " << entry.second << std::endl;
-    }    
-}
-
-void Document::insert_tfidf_score(std::pair<std::string, double> tfidf_score) {
-    tfidf_scores.insert(tfidf_score);
+uint64_t Document::get_docid() {
+    return m_docid;
 }
 
 int Document::get_total_term_count() {
     return m_total_term_count;
-}
-
-/*
- * 	returns the tfidf score of the term
- * 	returns 0 if the term is not in the Document
- */
-double Document::get_tfidf_score(const std::string &term) {
-    if (tfidf_scores.contains(term)) {
-        return tfidf_scores.at(term);
-    }
-
-    return 0.0;
 }
 
 std::string Document::get_filepath() const { return filepath; }

@@ -5,20 +5,19 @@
 #include "XMLContentStrategy.h"
 #include "TextContentStrategy.h"
 
-std::unique_ptr<Document> DocumentFactory::create_document(
-    const std::string &filepath, const std::string &extension) {
+std::unique_ptr<Document> DocumentFactory::create_document(uint64_t docid, const std::string &filepath, const std::string &extension) {
 
     if (extension == ".xml" || extension == ".xhtml") {
-        return std::make_unique<Document>(filepath, extension, std::make_unique<XMLContentStrategy>());
+        return std::make_unique<Document>(docid, filepath, extension, std::make_unique<XMLContentStrategy>());
     }
 
     if (extension == ".txt") {
-        return std::make_unique<Document>(filepath, extension, std::make_unique<TextContentStrategy>());
+        return std::make_unique<Document>(docid, filepath, extension, std::make_unique<TextContentStrategy>());
     }
 
     if (extension == ".pdf") {
         try {
-            return std::make_unique<Document>(filepath, extension, std::make_unique<PDFContentStrategy>());
+            return std::make_unique<Document>(docid, filepath, extension, std::make_unique<PDFContentStrategy>());
         } catch (std::exception &e) {
             std::cerr << "Exception caught creating pdf document: " << e.what();
             std::cerr << std::endl;

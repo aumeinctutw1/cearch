@@ -18,19 +18,17 @@
 class Document {
     public:
         /* TODO: make document independant of the filepath, rather use a title or document name or id */
-        Document(std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
+        Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
 
         /* fills the concordance from the content of the document */
         void index_document();
-
-        void print_tfidf_scores();
-        void insert_tfidf_score(std::pair<std::string, double> tfidf_score);
+        
 
         /* getter functions */
+        uint64_t get_docid();
         int get_total_term_count();
-        double get_tfidf_score(const std::string &term);
-        int get_term_frequency(const std::string &term);
         std::unordered_map<std::string, int> get_concordance();
+        int get_term_frequency(const std::string &term);
         std::string get_filepath() const;
         std::string get_extension();
         std::string get_file_content_as_string();
@@ -40,6 +38,7 @@ class Document {
     private:
         std::string read_content();
 
+        uint64_t m_docid;
         int m_total_term_count;
         std::string filepath;
         std::string file_extension;
@@ -48,9 +47,6 @@ class Document {
 
         /* every term in the document and a counter for that term */
         std::unordered_map<std::string, int> concordance;
-
-        /* every term in the document and its tfidf score */
-        std::unordered_map<std::string, double> tfidf_scores;
 };
 
 #endif

@@ -11,8 +11,7 @@
 */
 class DocumentFactory {
    public:
-    static std::unique_ptr<Document> create_document(
-        const std::string &filepath, const std::string &extension);
+    static std::unique_ptr<Document> create_document(uint64_t docid, const std::string &filepath, const std::string &extension);
 };
 
 #endif
