@@ -101,14 +101,12 @@ Response Session::handle_index() {
 }
 
 /* 
-*   TODO: should return json body
-*   which contains the results
-*   the request should also be json then:
-*
+*   Accepts and Responds with JSON, example query:
 *        curl -X POST http://localhost:8080/search \
 *        -H "Content-Type: application/json" \
 *        -d '{"query": "example search term"}'
-*
+*      
+*   TODO: Stream the response?
 */
 Response Session::handle_search() {
     Response res{http::status::ok, 11};

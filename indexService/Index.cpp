@@ -39,9 +39,10 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
 }
 
 /*
- *  queries the index and returns the result ordered by tfidf ranking
- *  returns a sorted vector of pairs <filepath, rank>, ascending order
- */
+*   Queries the index and returns the result ordered by tfidf ranking
+*   returns a sorted by rank ascending vector of pairs <document->filepath, tfidf-rank>
+*   TODO: timeout based search?
+*/
 std::vector<std::pair<std::string, double>> Index::query_index(const std::vector<std::string> &input_values) {
     std::vector<std::pair<std::string, double>> result;
     /* 
@@ -82,16 +83,16 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
 }
 
 /*
- * returns the number of documents in the index
- */
+*   returns the number of documents in the index
+*/
 int Index::get_document_counter() { return documents.size(); }
 
 /*
- *   Moves trough a directy and try's to read every supported file in it
- *   For every supported file in the dir, a Document is created
- */
+*   Moves trough a directy and try's to read every supported file in it
+*   For every supported file in the dir, a Document is created
+*/
 void Index::build_document_index(std::string directory) {
-    /* if the param is a directory */
+    /* check if the param is a directory */
     if (std::filesystem::status(directory).type() == std::filesystem::file_type::directory) {
         std::cout << "Building index of directory: " << directory << std::endl;
         if (std::filesystem::exists(directory)) {
@@ -142,22 +143,19 @@ void Index::build_tfidf_index() {
 }
 
 /*
- * calculates the tfidf for every word of every document in the
- * document index, saves the calculated values per word in a hashmap,
- * the values are accessed by filepath,
- * needs the start and end index because of threads
- * the tfidf index itself is protected by a mutex
- * To be run the build document index has to be complete
- */
+*   calculates the tfidf for every word of every document in the
+*   document index, saves the calculated values per word in a hashmap,
+*   the values are accessed by filepath,
+*   needs the start and end index because of threads
+*   the tfidf index itself is protected by a mutex
+*/
 void Index::calculate_tfidf_index(int start_index, int end_index) {
     for (int i = start_index; i < end_index; ++i) {
         std::cout << "Calculating tfidf index for document: " << documents.at(i)->get_filepath() << std::endl;
         for (auto &term : documents.at(i)->get_concordance()) {
-            /* skip stop words */
             if (std::find(stopwords.begin(), stopwords.end(), term.first) != stopwords.end()) {
                 continue;
             }
-            /* caclulating the tfidf */
             double tfidf = documents.at(i)->get_term_frequency(term.first) * inverse_doc_frequency(term.first, documents);
             documents.at(i)->insert_tfidf_score({term.first, tfidf});
         }
@@ -165,8 +163,8 @@ void Index::calculate_tfidf_index(int start_index, int end_index) {
 }
 
 /*
- * Calculates the idf for a certain term over the whole index
- */
+*   Calculates the idf for a certain term over the whole index
+*/
 double Index::inverse_doc_frequency(std::string term, const std::vector<std::unique_ptr<Document>> &corpus) {
     int term_count = 0;
     int n = corpus.size();
@@ -185,8 +183,8 @@ double Index::inverse_doc_frequency(std::string term, const std::vector<std::uni
 }
 
 /*
- *   read stopwords from a txt file
- */
+*   read stopwords from a txt file, save them in vector
+*/
 void Index::read_stopwords(const std::string &filepath) {
     try {
         std::ifstream file(filepath);
