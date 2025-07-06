@@ -71,7 +71,9 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
 
         for (const auto &[doc, tf, dl]: term_data) {
             double score = compute_bm25(tf, dl, m_avg_doc_length, idf);
-            score_map[doc] += score;
+            if (score > 0.0) {
+                score_map[doc] += score;
+            }
         }
     }
 
@@ -104,7 +106,7 @@ void Index::set_thread_num(int num) {
 
 /*
 *   Moves trough a directy and try's to read every supported file in it
-*   For every supported file in the dir, a Document is created
+*   For every supported file in the dir, a Document is created and stored in the document index
 */
 void Index::build_document_index(std::string directory) {
     /* check if the param is a directory */
