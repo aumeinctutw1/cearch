@@ -139,12 +139,12 @@ Response Session::handle_search() {
     clean_query = Document::clean_word(query);
 
     /* search the index */
-    std::vector<std::pair<std::string, double>> query_result = m_idx.query_index(clean_query);
+    std::vector<std::pair<uint64_t, double>> query_result = m_idx.query_index(clean_query);
 
     json response;
-    for(const auto &[filename, score]: query_result) {
+    for(const auto &[docid, score]: query_result) {
         response["resulsts"].push_back({
-            {"filename", filename},
+            {"docid", docid},
             {"score", score}
         });
     }

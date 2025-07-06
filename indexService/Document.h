@@ -51,7 +51,7 @@ class Document {
         int m_total_term_count;
         std::string filepath;
         std::string file_extension;
-        std::unique_ptr<ContentStrategy> strategy_;
+        std::unique_ptr<ContentStrategy> m_strategy;
         std::chrono::system_clock::time_point indexed_at;
 
         /* every term in the document and a counter for that term */

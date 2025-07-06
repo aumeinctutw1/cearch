@@ -56,14 +56,12 @@ Index::Index(std::string directory, std::string index_path, int threads_used)
 *   TODO: timeout based search?
 *   TODO: Split index in Buckets/Shards, use threads to search the buckets
 */
-std::vector<std::pair<std::string, double>> Index::query_index(const std::vector<std::string> &input_values) {
-    std::unordered_map<std::string, double> score_map;
+std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<std::string> &input_values) {
+    std::unordered_map<uint64_t, double> score_map;
 
     for (const auto &term: input_values) {
-        std::cout << "Searching term: " << term << std::endl;
-
         int doc_freq = 0;
-        std::vector<std::tuple<const std::string, int, int>> term_data;
+        std::vector<std::tuple<uint64_t, int, int>> term_data;
 
         for (const auto &doc: documents) {
             int term_freq = doc->get_term_frequency(term);
@@ -74,7 +72,7 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
             
             int doc_length = doc->get_total_term_count();
             /* temp store term_freq and doc_length for BM25 */
-            term_data.emplace_back(doc->get_filepath(), term_freq, doc_length);
+            term_data.emplace_back(doc->get_docid(), term_freq, doc_length);
         }
 
         double idf = compute_idf(get_document_counter(), doc_freq);
@@ -88,7 +86,7 @@ std::vector<std::pair<std::string, double>> Index::query_index(const std::vector
     }
 
     /* move scores into sortable vector */
-    std::vector<std::pair<std::string, double>> result(score_map.begin(), score_map.end());
+    std::vector<std::pair<uint64_t, double>> result(score_map.begin(), score_map.end());
 
     /* Sort the result ascending by rank */
     std::sort(result.begin(), result.end(),

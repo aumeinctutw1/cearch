@@ -16,7 +16,7 @@ class Index {
         Index(std::string directory, std::string index_path, int thread_num);
         ~Index() = default;
 
-        std::vector<std::pair<std::string, double>> query_index(const std::vector<std::string> &input_values);
+        std::vector<std::pair<uint64_t, double>> query_index(const std::vector<std::string> &input_values);
 
         int get_document_counter();
         int get_total_term_count();

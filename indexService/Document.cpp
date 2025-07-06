@@ -9,7 +9,7 @@
 
 /* Base Document Class */
 Document::Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy)
-    :m_docid(docid), filepath(filepath), file_extension(file_extension), strategy_(std::move(strategy))
+    :m_docid(docid), filepath(filepath), file_extension(file_extension), m_strategy(std::move(strategy))
 {
 }
 
@@ -86,11 +86,11 @@ void Document::index_document() {
 
     indexed_at = std::chrono::system_clock::now();
 
-    /* TODO: Update in Filesystem? */
+    /* TODO: Update in Index and Filesystem? */
 }
 
 std::string Document::read_content() {
-    return strategy_->read_content(filepath);
+    return m_strategy->read_content(filepath);
 }
 
 /*
