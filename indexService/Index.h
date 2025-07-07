@@ -10,10 +10,11 @@
 #include <vector>
 
 #include "Document.h"
+#include "ContentAddressedStorage.h"
 
 class Index {
     public:
-        Index(std::string directory, std::string index_path);
+        Index(std::string directory, std::string index_path, std::unique_ptr<ContentAddressedStorage> &content_store);
         ~Index() = default;
 
         std::vector<std::pair<uint64_t, double>> query_index(const std::vector<std::string> &input_values);
@@ -28,6 +29,9 @@ class Index {
         std::vector<std::string> stopwords;
 
         std::string index_path;
+
+        /* content storage */
+        std::shared_ptr<ContentAddressedStorage> m_content_store;       
 
         /* relevant for BM25 */
         uint64_t m_total_term_count;

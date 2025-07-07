@@ -8,6 +8,7 @@
 /* cearch headers */
 #include "Index.h"
 #include "Server.h"
+#include "ContentAddressedStorage.h"
 
 int main(int argc, const char *argv[]) {
     /*
@@ -27,12 +28,14 @@ int main(int argc, const char *argv[]) {
     try {
         boost::asio::io_context io_context;
 
+        auto cas_storage = std::make_unique<ContentAddressedStorage>(index_path);
+
         /* 
         *   TODO: Make indexing asynchronous?
         *   Indexing should be triggered from external sources?
         *   Right now it blocks here until the indexing is done
         */
-        Index idx(directory, index_path);
+        Index idx(directory, index_path, cas_storage);
 
         std::cout << "Starting Index and Query Services " << query_port << std::endl;
         Server query_service(io_context, query_port, idx);

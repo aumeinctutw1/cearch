@@ -56,7 +56,7 @@ class Document {
         /* every term in the document and a counter for that term */
         std::unordered_map<std::string, int> concordance;
 
-        std::string Document::read_content();
+        std::string read_content();
 };
 
 #endif

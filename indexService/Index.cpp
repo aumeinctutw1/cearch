@@ -12,9 +12,10 @@
 *   @param threads_used The number of threads which should be used during indexing. Must be >=0   
 * 
 *   TODO: save and load index to filesystem, using json? 
+*   TODO: remove Indexing from the constructor, trigger from outside (http server)
 */
-Index::Index(std::string directory, std::string index_path)
-    : index_path(index_path), m_total_term_count(0)
+Index::Index(std::string directory, std::string index_path, std::unique_ptr<ContentAddressedStorage> &content_store)
+    : index_path(index_path), m_total_term_count(0), m_content_store(std::move(content_store))
 {
     /* Check wether a index is present in the filesystem and can be loaded */
     std::string index_filepath = index_path + "/index.json";
@@ -96,10 +97,10 @@ int Index::get_avg_doc_length() { return m_avg_doc_length; }
 
 /* read content of a single document and create concordance */
 void Index::index_document(std::unique_ptr<Document> &doc) {
+    std::string content = doc->get_file_content_as_string();
     std::string word;
     int total_term_count = 0;
     std::unordered_map<std::string, int> concordance;
-    std::string content = doc->get_file_content_as_string();
     std::istringstream iss(content);
 
     std::cout << "Indexing doc : " << doc->get_docid() << std::endl;
@@ -125,7 +126,6 @@ void Index::index_document(std::unique_ptr<Document> &doc) {
     doc->set_total_term_count(total_term_count);
     doc->set_indexed_at(std::chrono::system_clock::now());
 }
-
 
 /*
 *   Moves trough a directy and try's to read every supported file in it
