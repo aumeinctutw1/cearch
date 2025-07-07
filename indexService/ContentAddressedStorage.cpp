@@ -9,7 +9,9 @@
 ContentAddressedStorage::ContentAddressedStorage(const std::string &storage_dir)
     :m_storage_dir(storage_dir) 
 {
-    /* remove trailing / from storage dir */
+    /* TODO: remove trailing / from storage dir */
+
+    /* TODO: check if the dir exists and is accesable? */
 }
 
 std::string ContentAddressedStorage::store(const std::string &content) {
