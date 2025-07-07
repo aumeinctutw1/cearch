@@ -22,13 +22,14 @@ class Document {
         /* TODO: make document independant of the filepath, rather use a title or document name or id */
         Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
 
-        /* fills the concordance from the content of the document */
-        void index_document();
+        bool contains_term(const std::string &term);
+        static std::vector<std::string> clean_word(std::string &word);
 
         /* setter functions */
         void set_concordance(std::unordered_map<std::string, int> concordance);
         void set_total_term_count(int term_count);
         void set_indexed_at(std::chrono::system_clock::time_point time);
+        void set_content_hash(std::string &hash);
 
         /* getter functions */
         uint64_t get_docid();
@@ -38,24 +39,24 @@ class Document {
         std::string get_filepath() const;
         std::string get_extension();
         std::string get_file_content_as_string();
-        bool contains_term(const std::string &term);
-        static std::vector<std::string> clean_word(std::string &word);
+        const std::string& get_content_hash() const;
 
         /* JSON Serialization, deserialization is done in DocumentFactory */
         nlohmann::json to_json() const;
 
     private:
-        std::string read_content();
-
         uint64_t m_docid;
         int m_total_term_count;
         std::string filepath;
         std::string file_extension;
         std::unique_ptr<ContentStrategy> m_strategy;
         std::chrono::system_clock::time_point indexed_at;
+        std::string m_content_hash;
 
         /* every term in the document and a counter for that term */
         std::unordered_map<std::string, int> concordance;
+
+        std::string Document::read_content();
 };
 
 #endif

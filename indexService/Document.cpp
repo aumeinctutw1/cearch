@@ -25,6 +25,14 @@ void Document::set_indexed_at(std::chrono::system_clock::time_point time) {
     indexed_at = time;
 }
 
+void Document::set_content_hash(std::string &hash) {
+    m_content_hash = hash;
+}
+
+const std::string& Document::get_content_hash() const {
+    return m_content_hash;
+}
+
 /* concordence contains every term in the document and its counter */
 std::unordered_map<std::string, int> Document::get_concordance() {
     return concordance;
@@ -56,41 +64,15 @@ std::string Document::get_file_content_as_string() {
     return file_content;
 }
 
+std::string Document::read_content() {
+    return m_strategy->read_content(filepath);
+}
+
 bool Document::contains_term(const std::string &term) {
     if (concordance.find(term) != concordance.end()) {
         return true;
     }
     return false;
-}
-
-void Document::index_document() {
-    std::string word;
-    std::istringstream iss(read_content());
-
-    std::cout << "Indexing doc : " << this->get_filepath() << std::endl;
-
-    while (iss >> word) {
-        /* split the word if necessary */
-        std::vector<std::string> clean_words = clean_word(word);
-        for (auto &clean_word : clean_words) {
-            if (clean_word.find_first_not_of(' ') != std::string::npos) {
-                if (concordance.find(clean_word) != concordance.end()) {
-                    concordance[clean_word]++;
-                } else {
-                    concordance[clean_word] = 1;
-                }
-                m_total_term_count++;
-            }
-        }
-    }
-
-    indexed_at = std::chrono::system_clock::now();
-
-    /* TODO: Update in Index and Filesystem? */
-}
-
-std::string Document::read_content() {
-    return m_strategy->read_content(filepath);
 }
 
 /*
