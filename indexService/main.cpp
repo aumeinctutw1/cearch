@@ -13,9 +13,9 @@ int main(int argc, const char *argv[]) {
     /*
     *   TODO: Use propper commandline parsing
     */
-    if (argc != 5) {
+    if (argc != 4) {
         std::cerr << "Usage: ./cearch <query_port> <Directory to index> <directory ";
-        std::cerr << "to save index in> <number of threads to use> ";
+        std::cerr << "to save index in> ";
         std::cerr << std::endl;
         return 1;
     }
@@ -23,7 +23,6 @@ int main(int argc, const char *argv[]) {
     int query_port = atoi(argv[1]);
     std::string directory = argv[2];
     std::string index_path = argv[3];
-    int threads = atoi(argv[4]);
 
     try {
         boost::asio::io_context io_context;
@@ -33,7 +32,7 @@ int main(int argc, const char *argv[]) {
         *   Indexing should be triggered from external sources?
         *   Right now it blocks here until the indexing is done
         */
-        Index idx(directory, index_path, threads);
+        Index idx(directory, index_path);
 
         std::cout << "Starting Index and Query Services " << query_port << std::endl;
         Server query_service(io_context, query_port, idx);

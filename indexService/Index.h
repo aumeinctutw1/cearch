@@ -13,7 +13,7 @@
 
 class Index {
     public:
-        Index(std::string directory, std::string index_path, int thread_num);
+        Index(std::string directory, std::string index_path);
         ~Index() = default;
 
         std::vector<std::pair<uint64_t, double>> query_index(const std::vector<std::string> &input_values);
@@ -21,7 +21,6 @@ class Index {
         int get_document_counter();
         int get_total_term_count();
         int get_avg_doc_length();
-        void set_thread_num(int num);
 
     private:
         /* holds a reference to every document in the index */
@@ -34,11 +33,8 @@ class Index {
         uint64_t m_total_term_count;
         uint64_t m_avg_doc_length;
 
-        /* threading */
-        int thread_num;
-        std::mutex mtx;
-        std::vector<std::thread> threads;
-
+        /* Indexing */
+        void index_document(std::unique_ptr<Document> &doc);
         void build_document_index(std::string directory);
         void read_stopwords(const std::string &filepath);
 

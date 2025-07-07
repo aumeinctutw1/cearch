@@ -13,20 +13,9 @@
 * 
 *   TODO: save and load index to filesystem, using json? 
 */
-Index::Index(std::string directory, std::string index_path, int threads_used)
-    : index_path(index_path), thread_num(threads_used), m_total_term_count(0)
+Index::Index(std::string directory, std::string index_path)
+    : index_path(index_path), m_total_term_count(0)
 {
-    if (threads_used == 0 || threads_used < 0) {
-        std::cerr << "Threads used is set to 0 or smaller than 0, setting 1" << std::endl;
-        set_thread_num(1);
-    }
-    
-    const auto processor_count = std::thread::hardware_concurrency();
-    if (processor_count == 0) {
-        std::cerr << "Processor count cant be determined" << std::endl;
-    }
-    std::cout << "Processor count: " << processor_count << " used threads: " << threads_used << std::endl;
-
     /* Check wether a index is present in the filesystem and can be loaded */
     std::string index_filepath = index_path + "/index.json";
     if (is_index_present()) {
@@ -99,20 +88,44 @@ std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<st
 }
 
 /*
-*   returns the number of documents in the index
+*   for statistics
 */
 int Index::get_document_counter() { return documents.size(); }
 int Index::get_total_term_count() { return m_total_term_count;}
 int Index::get_avg_doc_length() { return m_avg_doc_length; }
 
-void Index::set_thread_num(int num) {
-    if (num < 0 || num == 0) {
-        std::cerr  << "Threads num cant be 0 or smaller than 0, not setting thread num" << std::endl;
-        return;
+/* read content of a single document and create concordance */
+void Index::index_document(std::unique_ptr<Document> &doc) {
+    std::string word;
+    int total_term_count = 0;
+    std::unordered_map<std::string, int> concordance;
+    std::string content = doc->get_file_content_as_string();
+    std::istringstream iss(content);
+
+    std::cout << "Indexing doc : " << doc->get_docid() << std::endl;
+
+    while (iss >> word) {
+        /* split the word if necessary */
+        std::vector<std::string> clean_words = Document::clean_word(word);
+        for (auto &clean_word : clean_words) {
+            if (clean_word.find_first_not_of(' ') != std::string::npos) {
+                if (concordance.find(clean_word) != concordance.end()) {
+                    concordance[clean_word]++;
+                } else {
+                    concordance[clean_word] = 1;
+                }
+                total_term_count++;
+            }
+        }
     }
 
-    this->thread_num = num;
+    /* TODO: Store the Document using the CAS Class */
+
+    doc->set_concordance(concordance);
+    doc->set_total_term_count(total_term_count);
+    doc->set_indexed_at(std::chrono::system_clock::now());
 }
+
 
 /*
 *   Moves trough a directy and try's to read every supported file in it
@@ -129,7 +142,7 @@ void Index::build_document_index(std::string directory) {
                 try {
                     uint64_t docid = documents.size() + 1;
                     std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
-                    new_doc->index_document();
+                    index_document(new_doc);
                     m_total_term_count += new_doc->get_total_term_count();
                     documents.push_back(std::move(new_doc));
                 } catch (std::exception &e) {
