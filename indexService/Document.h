@@ -19,8 +19,10 @@
 */
 class Document {
     public:
-        /* TODO: make document independant of the filepath, rather use a title or document name or id */
+        /* TODO: instead of file path use some kind of data container that holds the raw file? Filepath should be removed from this class */
         Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
+        /* for use when document is loaded from json without a filepath */
+        Document(uint64_t docid, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
 
         /* TODO: need copy constructor because of unique ptr strategy? */
 

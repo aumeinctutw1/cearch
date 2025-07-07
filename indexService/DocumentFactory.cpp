@@ -29,7 +29,7 @@ std::unique_ptr<Document> DocumentFactory::create_document(uint64_t docid, const
 
 std::unique_ptr<Document> DocumentFactory::from_json(const nlohmann::json &j) {
     uint64_t docid = j.at("docid");
-    std::string filepath = j.at("filepath");
+    std::string content_hash = j.at("content_hash");
     std::string extension = j.at("file_extension");
 
     std::unique_ptr<ContentStrategy> strategy;
@@ -43,8 +43,9 @@ std::unique_ptr<Document> DocumentFactory::from_json(const nlohmann::json &j) {
         throw std::runtime_error("Unsupported file extension in JSON: " + extension);
     }
 
-    auto doc = std::make_unique<Document>(docid, filepath, extension, std::move(strategy));
+    auto doc = std::make_unique<Document>(docid, extension, std::move(strategy));
 
+    doc->set_content_hash(content_hash);
     doc->set_concordance(j.at("concordance").get<std::unordered_map<std::string, int>>());
     doc->set_total_term_count(j.at("total_term_count"));
     auto seconds_since_epoch = j.at("indexed_at").get<int64_t>();

@@ -13,6 +13,11 @@ Document::Document(uint64_t docid, std::string filepath, std::string file_extens
 {
 }
 
+Document::Document(uint64_t docid, std::string file_extension, std::unique_ptr<ContentStrategy> strategy)
+    :m_docid(docid), file_extension(file_extension), m_strategy(std::move(strategy))
+{
+}
+
 void Document::set_concordance(std::unordered_map<std::string, int> concordance_) {
     concordance = std::move(concordance_);
 }
@@ -107,7 +112,7 @@ std::vector<std::string> Document::clean_word(std::string &word) {
 nlohmann::json Document::to_json() const {
     return {
         {"docid", m_docid},
-        {"filepath", filepath},
+        {"content_hash", m_content_hash},
         {"file_extension", file_extension},
         {"total_term_count", m_total_term_count},
         {"concordance", concordance},
