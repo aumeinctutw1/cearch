@@ -143,7 +143,7 @@ Response Session::handle_search() {
 
     json response;
     for(const auto &[docid, score]: query_result) {
-        response["resulsts"].push_back({
+        response["results"].push_back({
             {"docid", docid},
             {"score", score}
         });
