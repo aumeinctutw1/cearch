@@ -22,6 +22,8 @@ class Document {
         /* TODO: make document independant of the filepath, rather use a title or document name or id */
         Document(uint64_t docid, std::string filepath, std::string file_extension, std::unique_ptr<ContentStrategy> strategy);
 
+        /* TODO: need copy constructor because of unique ptr strategy? */
+
         bool contains_term(const std::string &term);
         static std::vector<std::string> clean_word(std::string &word);
 

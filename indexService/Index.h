@@ -18,6 +18,9 @@ class Index {
         ~Index() = default;
 
         std::vector<std::pair<uint64_t, double>> query_index(const std::vector<std::string> &input_values);
+        const Document &get_document_by_id(uint64_t docid) const;
+
+        /* TODO: implement a consistency check against the content storage, are hashes from index present in filesystem? */
 
         int get_document_counter();
         int get_total_term_count();
@@ -25,7 +28,7 @@ class Index {
 
     private:
         /* holds a reference to every document in the index */
-        std::vector<std::unique_ptr<Document>> documents;
+        std::unordered_map<uint64_t, std::unique_ptr<Document>> documents;
         std::vector<std::string> stopwords;
 
         std::string index_path;

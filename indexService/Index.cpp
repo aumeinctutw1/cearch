@@ -37,6 +37,7 @@ Index::Index(std::string directory, std::string index_path, std::unique_ptr<Cont
 
     std::cout << "Total documents: " << get_document_counter() << std::endl;
     std::cout << "Total term count: " << m_total_term_count << std::endl;
+    std::cout << "Average doc length: " << m_avg_doc_length << std::endl;
 }
 
 /*
@@ -53,7 +54,7 @@ std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<st
         int doc_freq = 0;
         std::vector<std::tuple<uint64_t, int, int>> term_data;
 
-        for (const auto &doc: documents) {
+        for (const auto &[docid, doc]: documents) {
             int term_freq = doc->get_term_frequency(term);
 
             if (term_freq > 0) {
@@ -86,6 +87,27 @@ std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<st
     );
 
     return result;
+}
+
+/*
+*   Returns an immutable reference of a document from the index 
+*/
+const Document& Index::get_document_by_id(uint64_t docid) const {
+    std::cout << "Searching for document with id: " << docid << std::endl;
+
+    for (const auto& [docidid, doc]: documents) {
+        std::cout << "docid: " << docidid << std::endl;
+    }
+
+    auto it = documents.find(docid);
+    if (it == documents.end()) {
+        std::cerr << "Document with docid: " << docid << " not found in index" << std::endl;
+        throw std::out_of_range("Invalid document ID");
+    }
+
+
+
+    return *it->second;
 }
 
 /*
@@ -142,7 +164,7 @@ void Index::build_document_index(std::string directory) {
                     std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
                     index_document(new_doc);
                     m_total_term_count += new_doc->get_total_term_count();
-                    documents.push_back(std::move(new_doc));
+                    documents.emplace(docid, std::move(new_doc));
                 } catch (std::exception &e) {
                     std::cerr << "Exception caught reading file: ";
 					std::cerr << e.what() << std::endl;
@@ -195,7 +217,7 @@ double Index::compute_bm25(int term_freq, int doc_length, double avg_doc_len, do
 
 void Index::save_index_to_file(std::string filepath) {
     nlohmann::json j;
-    for (const auto &doc: documents) {
+    for (const auto &[docid, doc]: documents) {
         j.push_back(doc->to_json());
     }
     std::ofstream file(filepath);
@@ -211,7 +233,7 @@ void Index::load_index_from_file(std::string filepath) {
     for (const auto &doc_json: j) {
         auto doc = DocumentFactory::from_json(doc_json);
         m_total_term_count += doc->get_total_term_count();
-        documents.push_back(std::move(doc));
+        documents.emplace(doc->get_docid(), std::move(doc));
     }
 
     set_avg_doc_length();

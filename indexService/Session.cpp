@@ -1,6 +1,7 @@
 #include <functional>
 #include <unordered_map>
 #include <fstream>
+#include <regex>
 
 #include "nlohmann/json.hpp"
 #include "Session.h"
@@ -13,10 +14,16 @@ Session::Session(tcp::socket socket, Index &idx)
 
     /* init the possible routes for this session */
     m_routes = {
-        {"/search", [this]() { return handle_search();}},
-        {"/index", [this]() { return handle_index();}},
+        /* POST, returns query results ranked bm25 */
+        {"/query", [this]() { return handle_index_query(); }},
+        /* POST, TODO: index a document */
+        {"/index", [this]() { return handle_index(); }},
+        /* GET, return json representation for a specific document, example /document/123 */
+        {"/document", [this]() { return handle_document(); }},
         /* GET, return simple statistics from index as json */
-        {"/statistics", [this]() { return handle_statistics();}}
+        {"/statistics", [this]() { return handle_statistics(); }}
+
+        /* POST, TODO: /filter filter a specific document and return filtered content */
     };
 }
 
@@ -53,7 +60,7 @@ void Session::read_request() {
 
 void Session::handle_request() {
     /* print info about the request */
-    print_http_request_info(m_request);
+    //print_http_request_info(m_request);
 
     /* get the response from a handle */
     m_response = route_request(m_request.target());
@@ -78,6 +85,11 @@ void Session::handle_request() {
 }
 
 Response Session::route_request(const std::string &target) {
+    /* dynamic rest style route */
+    if (target.rfind("/document/", 0) == 0) {
+        return m_routes.find("/document")->second();
+    }
+
     auto it = m_routes.find(target);
     if (it != m_routes.end()) {
         return it->second();
@@ -94,8 +106,21 @@ Response Session::not_found() {
     return res;
 }
 
+Response Session::make_bad_request(const std::string &message) {
+    Response res{http::status::bad_request, 11};
+    res.set(http::field::server, "Cearch");
+    res.set(http::field::content_type, "application/json");
+
+    json j;
+    j["error"] = message;
+    res.body() = j.dump();
+
+    return res;
+}
+
 Response Session::handle_index() {
     Response res{http::status::not_found, 11};
+    res.set(http::field::server, "Cearch");
     res.set(http::field::content_type, "text/plain");
     res.body() = "Not implemented yet";
     res.prepare_payload();
@@ -108,11 +133,11 @@ Response Session::handle_index() {
 *        -H "Content-Type: application/json" \
 *        -d '{"query": "example search term"}'
 *      
-*   TODO: Stream the response?
+*   TODO: Stream the response on bigger queries? 
 */
-Response Session::handle_search() {
+Response Session::handle_index_query() {
     Response res{http::status::ok, 11};
-    res.set(http::field::server, "TFIDF Indexer");
+    res.set(http::field::server, "Cearch");
     res.set(http::field::content_type, "application/json");
 
     std::string query = "";
@@ -153,16 +178,33 @@ Response Session::handle_search() {
     return res;
 }
 
-Response Session::make_bad_request(const std::string &message) {
-    Response res{http::status::bad_request, 11};
-    res.set(http::field::server, "TFIDF Indexer");
-    res.set(http::field::content_type, "application/json");
+Response Session::handle_document() {
+    std::string target = std::string(m_request.target());
 
-    json j;
-    j["error"] = message;
-    res.body() = j.dump();
+    if (m_request.method() == http::verb::get) {
+        std::regex re("^/document/([0-9]+)$");
+        std::smatch match;
 
-    return res;
+        if (std::regex_match(target, match, re)) {
+            try {
+                uint64_t docid = std::stoull(match[1]);
+                auto &doc = m_idx.get_document_by_id(docid);
+
+                /* return the json representation of the doc if found */
+                Response res{http::status::ok, 11};
+                res.set(http::field::server, "Cearch");
+                res.set(http::field::content_type, "application/json");
+                res.body() = doc.to_json().dump();
+                return res;
+            } catch (std::exception &e) {
+                std::cerr << "Exception in hanling documents: " << e.what() << std::endl;
+                return not_found();
+            }
+        }
+    }
+    
+    /* if the regex failed or wrong http method is used, return 404 */
+    return not_found();
 }
 
 /*
@@ -170,7 +212,7 @@ Response Session::make_bad_request(const std::string &message) {
 */
 Response Session::handle_statistics() {
     Response res{http::status::ok, 11};
-    res.set(http::field::server, "TFIDF Indexer");
+    res.set(http::field::server, "Cearch");
     res.set(http::field::content_type, "application/json");
 
     json j;

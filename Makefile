@@ -1,7 +1,7 @@
 CXX=clang++
 CXXFLAGS=-Wall -Wextra -std=c++20 -O1 
 DEBUG = -fsanitize=address -g
-CXXLIBS=-lpugixml -lboost_system -lpoppler-cpp
+CXXLIBS=-lpugixml -lboost_system -lpoppler-cpp -lz -lssl -lcrypto
 
 APP_NAME=cearch
 SOURCE_DIR=indexService
@@ -32,8 +32,9 @@ build: $(OBJS)
 MAC_INCLUDES =  -I/opt/homebrew/Cellar/boost/1.88.0/include \
 				-I/opt/homebrew/Cellar/poppler/25.04.0/include \
 				-I/opt/homebrew/Cellar/pugixml/1.15/include \
+				-I/opt/homebrew/opt/openssl@3/include \
 				-I/opt/homebrew/Cellar/nlohmann-json/3.12.0/include
-MAC_LIBS=-lpugixml -lpoppler-cpp -L/opt/homebrew/lib/
+MAC_LIBS=-lpugixml -lpoppler-cpp -L/opt/homebrew/lib/ -lssl -lcrypto -lz
 
 # link object files in build dir to final executable
 build_mac: $(OBJS)

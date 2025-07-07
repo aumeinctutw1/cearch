@@ -47,8 +47,9 @@ class Session : public std::enable_shared_from_this<Session> {
         void read_request();
         void handle_request();
         Response route_request(const std::string &target);
-        Response handle_search();
+        Response handle_index_query();
         Response handle_index();
+        Response handle_document();
         Response handle_statistics();
         Response not_found();
         Response make_bad_request(const std::string &message);
