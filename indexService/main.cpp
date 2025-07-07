@@ -28,6 +28,7 @@ int main(int argc, const char *argv[]) {
     try {
         boost::asio::io_context io_context;
 
+        /* TODO: Make CAS Optional for the index */
         auto cas_storage = std::make_unique<ContentAddressedStorage>(index_path);
 
         /* 

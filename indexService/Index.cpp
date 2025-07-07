@@ -98,33 +98,31 @@ int Index::get_avg_doc_length() { return m_avg_doc_length; }
 /* read content of a single document and create concordance */
 void Index::index_document(std::unique_ptr<Document> &doc) {
     std::string content = doc->get_file_content_as_string();
-    std::string word;
-    int total_term_count = 0;
+    /* only the raw content is stored, after filtering via content strategy */
+    std::string content_hash = m_content_store->store(content);
+
     std::unordered_map<std::string, int> concordance;
     std::istringstream iss(content);
+    std::string word;
+    int total_term_count = 0;
 
     std::cout << "Indexing doc : " << doc->get_docid() << std::endl;
 
     while (iss >> word) {
         /* split the word if necessary */
         std::vector<std::string> clean_words = Document::clean_word(word);
-        for (auto &clean_word : clean_words) {
-            if (clean_word.find_first_not_of(' ') != std::string::npos) {
-                if (concordance.find(clean_word) != concordance.end()) {
-                    concordance[clean_word]++;
-                } else {
-                    concordance[clean_word] = 1;
-                }
+        for (const auto &clean_word : clean_words) {
+            if (!clean_word.empty() && clean_word.find_first_not_of(' ') != std::string::npos) {
+                concordance[clean_word]++;
                 total_term_count++;
-            }
+            } 
         }
     }
-
-    /* TODO: Store the Document using the CAS Class */
 
     doc->set_concordance(concordance);
     doc->set_total_term_count(total_term_count);
     doc->set_indexed_at(std::chrono::system_clock::now());
+    doc->set_content_hash(content_hash);
 }
 
 /*
