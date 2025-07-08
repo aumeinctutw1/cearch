@@ -93,19 +93,11 @@ std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<st
 *   Returns an immutable reference of a document from the index 
 */
 const Document& Index::get_document_by_id(uint64_t docid) const {
-    std::cout << "Searching for document with id: " << docid << std::endl;
-
-    for (const auto& [docidid, doc]: documents) {
-        std::cout << "docid: " << docidid << std::endl;
-    }
-
     auto it = documents.find(docid);
     if (it == documents.end()) {
         std::cerr << "Document with docid: " << docid << " not found in index" << std::endl;
         throw std::out_of_range("Invalid document ID");
     }
-
-
 
     return *it->second;
 }
