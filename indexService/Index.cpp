@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cmath>
+#include <chrono>
 
 #include "Index.h"
 #include "DocumentFactory.h"
@@ -19,15 +20,18 @@ Index::Index(std::string directory, std::string index_path, std::unique_ptr<Cont
 {
     /* Check wether a index is present in the filesystem and can be loaded */
     std::string index_filepath = index_path + "/index.json";
+    std::chrono::duration<double> indexing_duration;
     if (is_index_present()) {
         std::cout << "Loading existing index found in: " << index_path << std::endl; 
         load_index_from_file(index_filepath);
     } else {
         std::cout << "Building new Index" << std::endl;
-
         try {
-            read_stopwords("stopwords.txt");
+            /* performance measurement */
+            auto index_start = std::chrono::high_resolution_clock::now();
             build_document_index(directory);
+            auto index_end = std::chrono::high_resolution_clock::now();
+            indexing_duration = index_end - index_start;
             set_avg_doc_length();
             save_index_to_file(index_filepath);
         } catch (std::exception &e) {
@@ -38,6 +42,7 @@ Index::Index(std::string directory, std::string index_path, std::unique_ptr<Cont
     std::cout << "Total documents: " << get_document_counter() << std::endl;
     std::cout << "Total term count: " << m_total_term_count << std::endl;
     std::cout << "Average doc length: " << m_avg_doc_length << std::endl;
+    std::cout << "Indexing Execution time: " << indexing_duration.count() << " seconds" << std::endl;
 }
 
 /*
@@ -49,6 +54,10 @@ Index::Index(std::string directory, std::string index_path, std::unique_ptr<Cont
 */
 std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<std::string> &input_values) {
     std::unordered_map<uint64_t, double> score_map;
+
+    /* measure query performance in milliseconds */
+    std::chrono::duration<double, std::milli> query_duration;
+    auto query_start = std::chrono::high_resolution_clock::now();
 
     for (const auto &term: input_values) {
         int doc_freq = 0;
@@ -85,6 +94,10 @@ std::vector<std::pair<uint64_t, double>> Index::query_index(const std::vector<st
             return a.second > b.second; 
         }
     );
+
+    auto query_end = std::chrono::high_resolution_clock::now();
+    query_duration = query_end - query_start;
+    std::cout << "Query took: " << query_duration.count() << " milliseconds" << std::endl;
 
     return result;
 }
@@ -140,8 +153,8 @@ void Index::index_document(std::unique_ptr<Document> &doc) {
 }
 
 /*
-*   Moves trough a directy and try's to read every supported file in it
-*   For every supported file in the dir, a Document is created and stored in the document index
+*   Moves trough a directy and try's to create a Document for every file in the dir
+*   For every supported file extension in the dir, a Document is created and stored in the document index
 */
 void Index::build_document_index(std::string directory) {
     /* check if the param is a directory */
@@ -152,10 +165,13 @@ void Index::build_document_index(std::string directory) {
                 std::string filepath = entry.path();
                 std::string file_extension = std::filesystem::path(entry.path()).extension();
                 try {
+                    /* create unique id */
                     uint64_t docid = documents.size() + 1;
                     std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
+                    /* read documents content */
                     index_document(new_doc);
                     m_total_term_count += new_doc->get_total_term_count();
+                    /* place the document into the index */
                     documents.emplace(docid, std::move(new_doc));
                 } catch (std::exception &e) {
                     std::cerr << "Exception caught reading file: ";
