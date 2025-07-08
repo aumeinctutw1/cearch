@@ -9,6 +9,7 @@
 /* 
 *   a Factory which returns Document objects depending on a file extension 
 *   throws Exception if the file extension is not implemented
+*   TODO: Add OpenOffice (and MS Office?) Support
 */
 class DocumentFactory {
    public:

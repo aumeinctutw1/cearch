@@ -1,4 +1,3 @@
-#include <chrono>
 #include <exception>
 #include <iostream>
 
@@ -32,9 +31,8 @@ int main(int argc, const char *argv[]) {
         auto cas_storage = std::make_unique<ContentAddressedStorage>(index_path);
 
         /* 
-        *   TODO: Make indexing asynchronous?
-        *   Indexing should be triggered from external sources?
-        *   Right now it blocks here until the indexing is done
+        *   TODO: Make indexing multithreaded?
+        *   TODO: Indexing should be triggered from external sources? Right now it blocks here until the indexing is done
         */
         Index idx(directory, index_path, cas_storage);
 
