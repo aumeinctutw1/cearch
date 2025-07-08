@@ -12,7 +12,6 @@
 *   @param index_path The path in which the index should be stored on filesystem
 *   @param threads_used The number of threads which should be used during indexing. Must be >=0   
 * 
-*   TODO: save and load index to filesystem, using json? 
 *   TODO: remove Indexing from the constructor, trigger from outside (http server)
 */
 Index::Index(std::string directory, std::string index_path, std::unique_ptr<ContentAddressedStorage> &content_store)
@@ -133,8 +132,6 @@ void Index::index_document(std::unique_ptr<Document> &doc) {
     std::string word;
     int total_term_count = 0;
 
-    std::cout << "Indexing doc : " << doc->get_docid() << std::endl;
-
     while (iss >> word) {
         /* split the word if necessary */
         std::vector<std::string> clean_words = Document::clean_word(word);
@@ -164,19 +161,32 @@ void Index::build_document_index(std::string directory) {
             for (auto const &entry : std::filesystem::recursive_directory_iterator(directory)) {
                 std::string filepath = entry.path();
                 std::string file_extension = std::filesystem::path(entry.path()).extension();
-                try {
-                    /* create unique id */
-                    uint64_t docid = documents.size() + 1;
-                    std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
-                    /* read documents content */
-                    index_document(new_doc);
-                    m_total_term_count += new_doc->get_total_term_count();
-                    /* place the document into the index */
-                    documents.emplace(docid, std::move(new_doc));
-                } catch (std::exception &e) {
-                    std::cerr << "Exception caught reading file: ";
-					std::cerr << e.what() << std::endl;
-                }
+                
+                m_futures.push_back(std::async(std::launch::async, [this, filepath, file_extension]() {
+                    try {
+                        /* create unique id */
+                        uint64_t docid = m_docid_counter.fetch_add(1);
+                        std::unique_ptr<Document> new_doc = DocumentFactory::create_document(docid, filepath, file_extension);
+                        /* read documents content */
+                        index_document(new_doc);
+
+                        /* thread safety with lock_guard */
+                        {
+                            std::lock_guard<std::mutex> lock(m_index_mutex);
+                            m_total_term_count += new_doc->get_total_term_count();
+                            /* place the document into the index */
+                            documents.emplace(docid, std::move(new_doc));
+                        }
+                    } catch (std::exception &e) {
+                        std::cerr << "Error indexing " << filepath << ": ";
+                        std::cerr << e.what() << std::endl;
+                    }
+                }));
+            }
+
+            /* await the futures, TODO: maybe we can just continue and let the indexing run in the background */
+            for (auto &fut: m_futures) {
+                fut.get();
             }
         }
     } else {
@@ -210,6 +220,7 @@ void Index::read_stopwords(const std::string &filepath) {
 }
 
 void Index::set_avg_doc_length() {
+    std::lock_guard<std::mutex> lock(m_index_mutex);
     m_avg_doc_length = m_total_term_count / get_document_counter();
 }
 
@@ -225,23 +236,49 @@ double Index::compute_bm25(int term_freq, int doc_length, double avg_doc_len, do
 
 void Index::save_index_to_file(std::string filepath) {
     nlohmann::json j;
+
+    /* save docid counter, otherwise duplicates will be created after loading the index */
+    j["docid_counter"] = m_docid_counter.load();
+
+    j["documents"] = nlohmann::json::array();
     for (const auto &[docid, doc]: documents) {
-        j.push_back(doc->to_json());
+        j["documents"].push_back(doc->to_json());
     }
+
     std::ofstream file(filepath);
+    if (!file) {
+        throw std::runtime_error("Failed to open index file for writing");
+    }
+
     file << j.dump(4);
     write_index_marker();
 }
 
 void Index::load_index_from_file(std::string filepath) {
     std::ifstream file(filepath);
+    if (!file) {
+        throw std::runtime_error("Failed to open index file for reading");
+    }
+
     nlohmann::json j;
     file >> j;
 
-    for (const auto &doc_json: j) {
-        auto doc = DocumentFactory::from_json(doc_json);
-        m_total_term_count += doc->get_total_term_count();
-        documents.emplace(doc->get_docid(), std::move(doc));
+    /* load docid counter */
+    if (j.contains("docid_counter")) {
+        m_docid_counter = j["docid_counter"].get<uint64_t>();
+    } else {
+        /* fallback default is 1 */
+        m_docid_counter = 1;
+    }
+
+    /* load documents */
+    if (j.contains("documents") && j["documents"].is_array()) {
+        /* TODO: make this also multithreaded? */
+        for (const auto &doc_json: j["documents"]) {
+            auto doc = DocumentFactory::from_json(doc_json);
+            m_total_term_count += doc->get_total_term_count();
+            documents.emplace(doc->get_docid(), std::move(doc));
+        }
     }
 
     set_avg_doc_length();

@@ -8,6 +8,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <future>
 
 #include "Document.h"
 #include "ContentAddressedStorage.h"
@@ -39,6 +40,11 @@ class Index {
         /* relevant for BM25 */
         uint64_t m_total_term_count;
         uint64_t m_avg_doc_length;
+
+        /* Parallelization with future */
+        std::vector<std::future<void>> m_futures;
+        std::mutex m_index_mutex;
+        std::atomic<uint64_t> m_docid_counter{1};
 
         /* Indexing */
         void index_document(std::unique_ptr<Document> &doc);

@@ -65,6 +65,22 @@
         "iterator": "cpp",
         "system_error": "cpp",
         "type_traits": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "__tree": "cpp",
+        "any": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "csignal": "cpp",
+        "future": "cpp",
+        "list": "cpp",
+        "numbers": "cpp",
+        "shared_mutex": "cpp",
+        "source_location": "cpp",
+        "span": "cpp",
+        "typeindex": "cpp",
+        "valarray": "cpp",
+        "stdfloat": "cpp",
+        "text_encoding": "cpp"
     }
 }
