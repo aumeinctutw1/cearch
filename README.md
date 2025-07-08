@@ -4,9 +4,12 @@ Inspired by https://github.com/tsoding/seroost
 tfidf full text search 
 
 ## Dependencies
-- Pugixml (libpugixml-dev)
 - Boost Asio (libboost-all-dev)
-- poppler (lib-poppler)
+- Pugixml (libpugixml-dev)
+- poppler pdf (lib-poppler, lib-poppler-cpp-dev) 
+- nlohmann json (nlohmann-json3-dev)
+- openssl (libssl-dev)
+- zlib (zlib1g-dev)
 
 ## Build the project
 make

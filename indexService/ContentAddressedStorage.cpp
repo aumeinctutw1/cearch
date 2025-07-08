@@ -1,6 +1,7 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <vector>
 
 #include <openssl/sha.h>
 
